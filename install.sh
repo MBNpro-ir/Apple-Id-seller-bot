@@ -587,14 +587,7 @@ restart_service() {
 main() {
     check_root
 
-    # Check if running from curl (no terminal)
-    if [ ! -t 0 ]; then
-        echo -e "${GREEN}🚀 Starting automatic installation...${NC}"
-        install_bot
-        exit 0
-    fi
-
-    # Check for command line arguments
+    # Check for command line arguments first
     if [ "$1" = "install" ] || [ "$1" = "1" ]; then
         install_bot
         exit 0
@@ -612,6 +605,13 @@ main() {
         exit 0
     elif [ "$1" = "restart" ] || [ "$1" = "6" ]; then
         restart_service
+        exit 0
+    fi
+
+    # Check if running from curl (no terminal) or if INSTALL_MODE is set
+    if [ ! -t 0 ] || [ "$INSTALL_MODE" = "auto" ]; then
+        echo -e "${GREEN}🚀 Starting automatic installation...${NC}"
+        install_bot
         exit 0
     fi
 
@@ -644,7 +644,8 @@ main() {
                 ;;
             *)
                 echo -e "${RED}Invalid option. Please try again.${NC}"
-                sleep 2
+                echo -e "${YELLOW}Please enter a number between 0-6 and press Enter.${NC}"
+                sleep 3
                 ;;
         esac
     done
