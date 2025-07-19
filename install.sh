@@ -274,26 +274,6 @@ fi
 
 echo "   Download complete."
 
-# Download license checker
-log_message "Downloading license checker..."
-if wget -q -O "license_checker.py" "${GITHUB_LICENSE_CHECKER_URL}"; then
-    echo "   License checker downloaded successfully."
-else
-    echo "   ${YELLOW}[WARNING] Could not download license_checker.py. Creating minimal version.${NC}"
-    # Create a minimal license checker as fallback
-    cat > license_checker.py << 'EOF'
-# Minimal license checker - replace with full version
-def check_license():
-    return True
-
-def start_license_monitoring():
-    pass
-
-def shutdown_license_checker():
-    pass
-EOF
-fi
-
 while true; do
     log_message "Step 3: License validation..."
     echo "--------------------------------------------------"
@@ -389,15 +369,7 @@ mkdir -p database config backups
 touch botlog.txt
 echo "   Directories (database, config, backups) are ready."
 
-log_message "Step 7: Installing license checker..."
-# License checker is already downloaded in Step 2
-if [ -f "license_checker.py" ]; then
-    echo "   License checker is ready."
-else
-    echo "   ${YELLOW}[WARNING] License checker not found. Bot may not work properly.${NC}"
-fi
-
-log_message "Step 8: Setting up the bot as a system service..."
+log_message "Step 7: Setting up the bot as a system service..."
 cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
 Description=Apple ID Bot Service
@@ -417,7 +389,7 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 echo "   Service file created."
-log_message "Step 9: Starting the bot service..."
+log_message "Step 8: Starting the bot service..."
 systemctl daemon-reload
 systemctl enable ${SERVICE_NAME}.service
 systemctl start ${SERVICE_NAME}.service
@@ -608,8 +580,8 @@ main() {
         exit 0
     fi
 
-    # Check if running from curl (no terminal) or if INSTALL_MODE is set
-    if [ ! -t 0 ] || [ "$INSTALL_MODE" = "auto" ]; then
+    # Only auto-install if explicitly requested
+    if [ "$INSTALL_MODE" = "auto" ]; then
         echo -e "${GREEN}🚀 Starting automatic installation...${NC}"
         install_bot
         exit 0
