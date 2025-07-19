@@ -9,6 +9,7 @@ EXECUTABLE_NAME="apple_bot"
 GITHUB_REPO_URL="https://github.com/MBNpro-ir/Apple-Id-seller-bot"
 GITHUB_EXECUTABLE_URL="${GITHUB_REPO_URL}/raw/main/apple_bot"
 GITHUB_REQUIREMENTS_URL="${GITHUB_REPO_URL}/raw/main/requirements.txt"
+
 BACKUP_DIR="${INSTALL_DIR}/backups"
 LOG_FILE="${INSTALL_DIR}/update.log"
 LICENSE_API_URL="http://38.180.138.154:8080"
@@ -94,27 +95,20 @@ validate_license_key() {
     echo "   Validating license key..."
 
     # Check if API is running
-    echo "   Checking API server status..."
-    local status_response=$(curl -s "$LICENSE_API_URL/status" 2>/dev/null)
-    if [ $? -ne 0 ] || [ -z "$status_response" ]; then
+    if ! curl -s "$LICENSE_API_URL/status" >/dev/null 2>&1; then
         echo -e "   ${RED}[ERROR] License API server is not running or unreachable.${NC}"
-        echo -e "   ${YELLOW}[INFO] API URL: $LICENSE_API_URL${NC}"
         echo -e "   ${YELLOW}[INFO] Contact @mbnsubmanager_bot for support.${NC}"
         return 1
     fi
-    echo "   API server is running: $status_response"
 
     # Generate API key
     local api_key=$(generate_api_key "$api_secret")
-    echo "   Generated API key: ${api_key:0:8}..." # Show first 8 chars for debugging
 
     # Validate license
     local response=$(curl -s -X POST "$LICENSE_API_URL/validate" \
         -H "Content-Type: application/json" \
         -H "X-API-Key: $api_key" \
         -d "{\"license_key\":\"$license_key\"}" 2>/dev/null)
-
-    echo "   API Response: $response"
 
     if [ $? -eq 0 ] && echo "$response" | grep -q '"valid":true'; then
         local license_name=$(echo "$response" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
@@ -126,8 +120,6 @@ validate_license_key() {
     else
         local error_msg=$(echo "$response" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
         echo -e "   ${RED}[ERROR] License validation failed: ${error_msg:-Unknown error}${NC}"
-        echo -e "   ${YELLOW}[INFO] Contact @mbnsubmanager_bot for a valid license.${NC}"
-        echo -e "   ${YELLOW}[DEBUG] Full response: $response${NC}"
         return 1
     fi
 }
@@ -142,7 +134,6 @@ prompt_for_license() {
                 break
             else
                 echo -e "   ${RED}[ERROR] Invalid license key. Please try again.${NC}"
-                echo -e "   ${YELLOW}[HINT] Get your license from @mbnsubmanager_bot${NC}"
             fi
         else
             echo -e "   ${RED}[ERROR] License key cannot be empty. Please try again.${NC}"
