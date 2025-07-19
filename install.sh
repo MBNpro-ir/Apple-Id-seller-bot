@@ -73,7 +73,17 @@ prompt_for_input() {
 # Generate API key from secret
 generate_api_key() {
     local secret=$1
-    echo -n "$secret" | sha256sum | cut -d' ' -f1 | cut -c1-32
+    # Try different hash commands
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo -n "$secret" | sha256sum | cut -d' ' -f1 | cut -c1-32
+    elif command -v shasum >/dev/null 2>&1; then
+        echo -n "$secret" | shasum -a 256 | cut -d' ' -f1 | cut -c1-32
+    elif command -v openssl >/dev/null 2>&1; then
+        echo -n "$secret" | openssl dgst -sha256 | cut -d' ' -f2 | cut -c1-32
+    else
+        # Fallback - simple hash (not secure but works for testing)
+        echo -n "$secret" | od -A n -t x1 | tr -d ' \n' | cut -c1-32
+    fi
 }
 
 # Validate license key with API
@@ -84,20 +94,27 @@ validate_license_key() {
     echo "   Validating license key..."
 
     # Check if API is running
-    if ! curl -s "$LICENSE_API_URL/status" >/dev/null 2>&1; then
-        echo -e "   ${RED}[ERROR] License API server is not running. Please contact administrator.${NC}"
+    echo "   Checking API server status..."
+    local status_response=$(curl -s "$LICENSE_API_URL/status" 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$status_response" ]; then
+        echo -e "   ${RED}[ERROR] License API server is not running or unreachable.${NC}"
+        echo -e "   ${YELLOW}[INFO] API URL: $LICENSE_API_URL${NC}"
         echo -e "   ${YELLOW}[INFO] Contact @mbnsubmanager_bot for support.${NC}"
         return 1
     fi
+    echo "   API server is running: $status_response"
 
     # Generate API key
     local api_key=$(generate_api_key "$api_secret")
+    echo "   Generated API key: ${api_key:0:8}..." # Show first 8 chars for debugging
 
     # Validate license
     local response=$(curl -s -X POST "$LICENSE_API_URL/validate" \
         -H "Content-Type: application/json" \
         -H "X-API-Key: $api_key" \
         -d "{\"license_key\":\"$license_key\"}" 2>/dev/null)
+
+    echo "   API Response: $response"
 
     if [ $? -eq 0 ] && echo "$response" | grep -q '"valid":true'; then
         local license_name=$(echo "$response" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
@@ -110,6 +127,7 @@ validate_license_key() {
         local error_msg=$(echo "$response" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
         echo -e "   ${RED}[ERROR] License validation failed: ${error_msg:-Unknown error}${NC}"
         echo -e "   ${YELLOW}[INFO] Contact @mbnsubmanager_bot for a valid license.${NC}"
+        echo -e "   ${YELLOW}[DEBUG] Full response: $response${NC}"
         return 1
     fi
 }
