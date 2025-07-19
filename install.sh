@@ -46,14 +46,15 @@ show_menu() {
     echo -e "${GREEN}║  ${YELLOW}3.${NC} ${GREEN}Uninstall Bot                                            ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}4.${NC} ${GREEN}Check Bot Status                                         ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}5.${NC} ${GREEN}View Bot Logs                                            ║${NC}"
-    echo -e "${GREEN}║  ${YELLOW}6.${NC} ${GREEN}Restart Bot Service                                      ║${NC}"
-    echo -e "${GREEN}║  ${YELLOW}7.${NC} ${GREEN}Stop Bot Service                                         ║${NC}"
+    echo -e "${GREEN}║  ${YELLOW}6.${NC} ${GREEN}Start Bot Service                                        ║${NC}"
+    echo -e "${GREEN}║  ${YELLOW}7.${NC} ${GREEN}Restart Bot Service                                      ║${NC}"
+    echo -e "${GREEN}║  ${YELLOW}8.${NC} ${GREEN}Stop Bot Service                                         ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}0.${NC} ${GREEN}Exit                                                     ║${NC}"
     echo -e "${GREEN}║                                                              ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     # Read from terminal directly
-    read -p "Please select an option [0-7]: " choice < /dev/tty
+    read -p "Please select an option [0-8]: " choice < /dev/tty
     export choice
 }
 prompt_for_input() {
@@ -561,6 +562,60 @@ view_logs() {
     journalctl -u "$SERVICE_NAME" -n 50 -f
 }
 
+# Start service function
+start_service() {
+    log_message "Starting bot service..."
+
+    # Reload daemon
+    echo "   Reloading systemd daemon..."
+    systemctl daemon-reload
+
+    # Enable service
+    echo "   Enabling service..."
+    systemctl enable "$SERVICE_NAME" 2>/dev/null || true
+
+    # Start service with timeout
+    echo "   Starting service..."
+    timeout 15 systemctl start "$SERVICE_NAME" 2>/dev/null || {
+        log_message "${RED}❌ Service start timed out${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Troubleshooting:${NC}"
+        echo -e "${GREEN}   Check status: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   View logs:    ${YELLOW}sudo journalctl -u $SERVICE_NAME -n 20${NC}"
+        read -p "Press Enter to continue..." < /dev/tty
+        return 1
+    }
+
+    sleep 3
+
+    # Check status
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        log_message "${GREEN}✅ Service started successfully${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Service is now running!${NC}"
+        echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
+        echo -e "${GREEN}   Status:    ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+        echo ""
+        echo -e "${YELLOW}Would you like to view live logs now? [y/N]:${NC}"
+        read -p "" view_logs_choice < /dev/tty
+        if [[ "$view_logs_choice" == "y" || "$view_logs_choice" == "Y" ]]; then
+            echo ""
+            echo -e "${GREEN}Showing live logs (Press Ctrl+C to exit):${NC}"
+            sleep 2
+            journalctl -u "$SERVICE_NAME" -f
+        fi
+    else
+        log_message "${RED}❌ Service failed to start${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Troubleshooting:${NC}"
+        echo -e "${GREEN}   Check status: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   View logs:    ${YELLOW}sudo journalctl -u $SERVICE_NAME -n 20${NC}"
+        echo -e "${GREEN}   Manual start: ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
+    fi
+    echo ""
+    read -p "Press Enter to continue..." < /dev/tty
+}
+
 # Restart service function
 restart_service() {
     log_message "Restarting bot service..."
@@ -608,28 +663,28 @@ stop_service() {
 
     # Stop service with timeout
     echo "   Stopping service..."
-    timeout 10 systemctl stop "$SERVICE_NAME" 2>/dev/null || {
+    timeout 10 systemctl stop "$SERVICE_NAME" &>/dev/null || {
         echo "   Force killing service..."
-        systemctl kill "$SERVICE_NAME" 2>/dev/null || true
+        timeout 5 systemctl kill "$SERVICE_NAME" &>/dev/null || true
     }
 
     # Disable service
     echo "   Disabling service..."
-    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+    timeout 5 systemctl disable "$SERVICE_NAME" &>/dev/null || true
 
     # Reload daemon
     echo "   Reloading systemd..."
-    systemctl daemon-reload
+    timeout 5 systemctl daemon-reload &>/dev/null || true
 
     sleep 2
 
     if ! systemctl is-active --quiet "$SERVICE_NAME"; then
         log_message "${GREEN}✅ Service stopped and disabled successfully${NC}"
         echo ""
-        echo -e "${YELLOW}📋 To start again:${NC}"
-        echo -e "${GREEN}   Enable:    ${YELLOW}sudo systemctl enable $SERVICE_NAME${NC}"
-        echo -e "${GREEN}   Start:     ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
-        echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
+        echo -e "${YELLOW}📋 To start again use option 6 or:${NC}"
+        echo -e "${GREEN}   ${YELLOW}sudo systemctl daemon-reload${NC}"
+        echo -e "${GREEN}   ${YELLOW}sudo systemctl enable $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
     else
         log_message "${RED}❌ Service is still running${NC}"
         echo ""
@@ -690,9 +745,12 @@ main() {
                 view_logs
                 ;;
             6)
-                restart_service
+                start_service
                 ;;
             7)
+                restart_service
+                ;;
+            8)
                 stop_service
                 ;;
             0)
@@ -701,7 +759,7 @@ main() {
                 ;;
             *)
                 echo -e "${RED}Invalid option. Please try again.${NC}"
-                echo -e "${YELLOW}Please enter a number between 0-7 and press Enter.${NC}"
+                echo -e "${YELLOW}Please enter a number between 0-8 and press Enter.${NC}"
                 sleep 3
                 ;;
         esac
