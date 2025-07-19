@@ -47,12 +47,13 @@ show_menu() {
     echo -e "${GREEN}║  ${YELLOW}4.${NC} ${GREEN}Check Bot Status                                         ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}5.${NC} ${GREEN}View Bot Logs                                            ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}6.${NC} ${GREEN}Restart Bot Service                                      ║${NC}"
+    echo -e "${GREEN}║  ${YELLOW}7.${NC} ${GREEN}Stop Bot Service                                         ║${NC}"
     echo -e "${GREEN}║  ${YELLOW}0.${NC} ${GREEN}Exit                                                     ║${NC}"
     echo -e "${GREEN}║                                                              ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     # Read from terminal directly
-    read -p "Please select an option [0-6]: " choice < /dev/tty
+    read -p "Please select an option [0-7]: " choice < /dev/tty
     export choice
 }
 prompt_for_input() {
@@ -406,10 +407,20 @@ systemctl start ${SERVICE_NAME}.service
 echo "   Service enabled and started."
     echo "--------------------------------------------------"
     log_message "✅ Installation Complete!"
-    log_message "The bot is now running. Manage it with these commands:"
-    echo "   - Check Status: sudo systemctl status ${SERVICE_NAME}"
-    echo "   - View Logs:    sudo journalctl -u ${SERVICE_NAME} -f"
-    echo "   - Restart Bot:  sudo systemctl restart ${SERVICE_NAME}"
+    log_message "The bot is now running. Use these commands to manage it:"
+    echo ""
+    echo -e "${YELLOW}📋 Service Management Commands:${NC}"
+    echo -e "${GREEN}   Enable & Start:${NC} ${YELLOW}sudo systemctl daemon-reload${NC}"
+    echo -e "                   ${YELLOW}sudo systemctl enable ${SERVICE_NAME}${NC}"
+    echo -e "                   ${YELLOW}sudo systemctl start ${SERVICE_NAME}${NC}"
+    echo -e "                   ${YELLOW}sudo journalctl -u ${SERVICE_NAME} -f${NC}"
+    echo ""
+    echo -e "${GREEN}   Restart:${NC}        ${YELLOW}sudo systemctl restart ${SERVICE_NAME}${NC}"
+    echo -e "                   ${YELLOW}sudo journalctl -u ${SERVICE_NAME} -f${NC}"
+    echo ""
+    echo -e "${GREEN}   Stop & Disable:${NC} ${YELLOW}sudo systemctl disable ${SERVICE_NAME}${NC}"
+    echo -e "                   ${YELLOW}sudo systemctl stop ${SERVICE_NAME}${NC}"
+    echo -e "                   ${YELLOW}sudo systemctl daemon-reload${NC}"
     echo ""
     read -p "Press Enter to continue..." < /dev/tty
 }
@@ -558,8 +569,36 @@ restart_service() {
 
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         log_message "${GREEN}✅ Service restarted successfully${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Useful commands:${NC}"
+        echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
+        echo -e "${GREEN}   Restart:   ${YELLOW}sudo systemctl restart $SERVICE_NAME${NC}"
     else
         log_message "${RED}❌ Failed to restart service${NC}"
+    fi
+    echo ""
+    read -p "Press Enter to continue..." < /dev/tty
+}
+
+# Stop service function
+stop_service() {
+    log_message "Stopping bot service..."
+
+    # Stop and disable service
+    systemctl stop "$SERVICE_NAME"
+    systemctl disable "$SERVICE_NAME"
+    systemctl daemon-reload
+
+    sleep 2
+
+    if ! systemctl is-active --quiet "$SERVICE_NAME"; then
+        log_message "${GREEN}✅ Service stopped and disabled successfully${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Service commands:${NC}"
+        echo -e "${GREEN}   Start:     ${YELLOW}sudo systemctl enable $SERVICE_NAME && sudo systemctl start $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
+    else
+        log_message "${RED}❌ Failed to stop service${NC}"
     fi
     echo ""
     read -p "Press Enter to continue..." < /dev/tty
@@ -616,13 +655,16 @@ main() {
             6)
                 restart_service
                 ;;
+            7)
+                stop_service
+                ;;
             0)
                 echo -e "${GREEN}Goodbye!${NC}"
                 exit 0
                 ;;
             *)
                 echo -e "${RED}Invalid option. Please try again.${NC}"
-                echo -e "${YELLOW}Please enter a number between 0-6 and press Enter.${NC}"
+                echo -e "${YELLOW}Please enter a number between 0-7 and press Enter.${NC}"
                 sleep 3
                 ;;
         esac
