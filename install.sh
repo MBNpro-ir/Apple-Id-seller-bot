@@ -587,6 +587,35 @@ restart_service() {
 main() {
     check_root
 
+    # Check if running from curl (no terminal)
+    if [ ! -t 0 ]; then
+        echo -e "${GREEN}🚀 Starting automatic installation...${NC}"
+        install_bot
+        exit 0
+    fi
+
+    # Check for command line arguments
+    if [ "$1" = "install" ] || [ "$1" = "1" ]; then
+        install_bot
+        exit 0
+    elif [ "$1" = "update" ] || [ "$1" = "2" ]; then
+        update_bot
+        exit 0
+    elif [ "$1" = "uninstall" ] || [ "$1" = "3" ]; then
+        uninstall_bot
+        exit 0
+    elif [ "$1" = "status" ] || [ "$1" = "4" ]; then
+        check_status
+        exit 0
+    elif [ "$1" = "logs" ] || [ "$1" = "5" ]; then
+        view_logs
+        exit 0
+    elif [ "$1" = "restart" ] || [ "$1" = "6" ]; then
+        restart_service
+        exit 0
+    fi
+
+    # Interactive menu
     while true; do
         show_menu
 
@@ -621,5 +650,5 @@ main() {
     done
 }
 
-# Run main function
-main
+# Run main function with arguments
+main "$@"
