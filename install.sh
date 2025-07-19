@@ -351,7 +351,7 @@ log_message "Step 5: Creating .env configuration file..."
 cat > .env << EOF
 LICENSE_KEY=${LICENSE_KEY}
 LICENSE_API_URL=${LICENSE_API_URL}
-LICENSE_CHECK_INTERVAL=3600
+
 API_SECRET=${API_SECRET}
 BOT_TOKEN=${BOT_TOKEN}
 ADMIN_ID=${ADMIN_ID}
