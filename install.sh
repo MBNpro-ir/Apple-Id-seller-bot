@@ -9,7 +9,6 @@ EXECUTABLE_NAME="apple_bot"
 GITHUB_REPO_URL="https://github.com/MBNpro-ir/Apple-Id-seller-bot"
 GITHUB_EXECUTABLE_URL="${GITHUB_REPO_URL}/raw/main/apple_bot"
 GITHUB_REQUIREMENTS_URL="${GITHUB_REPO_URL}/raw/main/requirements.txt"
-GITHUB_LICENSE_CHECKER_URL="${GITHUB_REPO_URL}/raw/main/license_checker.py"
 BACKUP_DIR="${INSTALL_DIR}/backups"
 LOG_FILE="${INSTALL_DIR}/update.log"
 LICENSE_API_URL="http://38.180.138.154:8080"
@@ -51,7 +50,8 @@ show_menu() {
     echo -e "${GREEN}║                                                              ║${NC}"
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    read -p "Please select an option [0-6]: " choice
+    # Read from terminal directly
+    read -p "Please select an option [0-6]: " choice < /dev/tty
     export choice
 }
 prompt_for_input() {
@@ -59,7 +59,7 @@ prompt_for_input() {
     local full_prompt="${prompt}"
     if [ -n "$default_value" ]; then full_prompt+=" [Default: $default_value]"; fi
     while true; do
-        read -p "$full_prompt: " user_input
+        read -p "$full_prompt: " user_input < /dev/tty
         local final_value="${user_input:-$default_value}"
         if [ -n "$final_value" ]; then
             eval "$var_name=\"$final_value\""
@@ -117,7 +117,7 @@ validate_license_key() {
 prompt_for_license() {
     local prompt=$1 var_name=$2 api_secret=$3
     while true; do
-        read -p "$prompt: " user_input
+        read -p "$prompt: " user_input < /dev/tty
         if [ -n "$user_input" ]; then
             if validate_license_key "$user_input" "$api_secret"; then
                 eval "$var_name=\"$user_input\""
@@ -136,7 +136,7 @@ prompt_for_numeric() {
     local full_prompt="${prompt}"
     if [ -n "$default_value" ]; then full_prompt+=" [Default: $default_value]"; fi
     while true; do
-        read -p "$full_prompt: " user_input
+        read -p "$full_prompt: " user_input < /dev/tty
         local final_value="${user_input:-$default_value}"
         if [[ "$final_value" =~ ^-?[0-9]+$ ]]; then
             eval "$var_name=\"$final_value\""
@@ -152,7 +152,7 @@ prompt_for_payment_group() {
     local full_prompt="${prompt}"
     if [ -n "$default_value" ]; then full_prompt+=" [Default: $default_value]"; fi
     while true; do
-        read -p "$full_prompt: " user_input
+        read -p "$full_prompt: " user_input < /dev/tty
         local final_value="${user_input:-$default_value}"
         if [ -n "$final_value" ]; then
             # Accept both numeric IDs (like -100123456789) and usernames (like @channel_name)
@@ -331,7 +331,7 @@ BANK_IBAN=${BANK_IBAN}
 SUPPORT_USERNAME=${SUPPORT_USERNAME}
 EOF
     echo -e "${NC}"
-    read -p "Is the configuration correct? [Y/n]: " confirmation
+    read -p "Is the configuration correct? [Y/n]: " confirmation < /dev/tty
     if [[ "$confirmation" != "n" && "$confirmation" != "N" ]]; then
         break
     else
@@ -402,7 +402,7 @@ echo "   Service enabled and started."
     echo "   - View Logs:    sudo journalctl -u ${SERVICE_NAME} -f"
     echo "   - Restart Bot:  sudo systemctl restart ${SERVICE_NAME}"
     echo ""
-    read -p "Press Enter to continue..."
+    read -p "Press Enter to continue..." < /dev/tty
 }
 
 # Update function
@@ -411,7 +411,7 @@ update_bot() {
 
     if [ ! -f "${INSTALL_DIR}/${EXECUTABLE_NAME}" ]; then
         log_message "${RED}ERROR: Bot is not installed. Please install it first.${NC}"
-        read -p "Press Enter to continue..."
+        read -p "Press Enter to continue..." < /dev/tty
         return 1
     fi
 
@@ -442,7 +442,7 @@ update_bot() {
             log_message "${GREEN}✅ Update completed successfully!${NC}"
             log_message "Service is running"
             echo ""
-            read -p "Press Enter to continue..."
+            read -p "Press Enter to continue..." < /dev/tty
         else
             log_message "${RED}❌ Update failed! Service is not running${NC}"
             # Try to rollback
@@ -459,7 +459,7 @@ update_bot() {
                 fi
             fi
             echo ""
-            read -p "Press Enter to continue..."
+            read -p "Press Enter to continue..." < /dev/tty
         fi
     else
         # No update available - return to main menu automatically
@@ -474,10 +474,10 @@ uninstall_bot() {
     echo "--------------------------------------------------"
     echo -e "${RED}⚠️  WARNING: This will remove the bot executable but preserve your data${NC}"
     echo ""
-    read -p "Are you sure you want to uninstall the bot? [y/N]: " confirmation
+    read -p "Are you sure you want to uninstall the bot? [y/N]: " confirmation < /dev/tty
     if [[ "$confirmation" != "y" && "$confirmation" != "Y" ]]; then
         log_message "Uninstallation cancelled."
-        read -p "Press Enter to continue..."
+        read -p "Press Enter to continue..." < /dev/tty
         return 0
     fi
 
@@ -514,7 +514,7 @@ uninstall_bot() {
     echo "   - backups/ (All created backups)"
     echo "   - botlog.txt (The main application log)"
     echo ""
-    read -p "Press Enter to continue..."
+    read -p "Press Enter to continue..." < /dev/tty
 }
 
 # Check status function
@@ -529,7 +529,7 @@ check_status() {
     echo ""
     systemctl status "$SERVICE_NAME" --no-pager -l
     echo ""
-    read -p "Press Enter to continue..."
+    read -p "Press Enter to continue..." < /dev/tty
 }
 
 # View logs function
@@ -553,7 +553,7 @@ restart_service() {
         log_message "${RED}❌ Failed to restart service${NC}"
     fi
     echo ""
-    read -p "Press Enter to continue..."
+    read -p "Press Enter to continue..." < /dev/tty
 }
 
 # Main script
@@ -581,13 +581,6 @@ main() {
         exit 0
     elif [ "$1" = "restart" ] || [ "$1" = "6" ]; then
         restart_service
-        exit 0
-    fi
-
-    # Only auto-install if explicitly requested
-    if [ "$INSTALL_MODE" = "auto" ]; then
-        echo -e "${GREEN}🚀 Starting automatic installation...${NC}"
-        install_bot
         exit 0
     fi
 
