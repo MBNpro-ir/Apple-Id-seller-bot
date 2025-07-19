@@ -564,17 +564,39 @@ view_logs() {
 # Restart service function
 restart_service() {
     log_message "Restarting bot service..."
-    systemctl restart "$SERVICE_NAME"
+
+    # Stop service first with timeout
+    echo "   Stopping service..."
+    timeout 10 systemctl stop "$SERVICE_NAME" 2>/dev/null || {
+        echo "   Force killing service..."
+        systemctl kill "$SERVICE_NAME" 2>/dev/null || true
+    }
+    sleep 2
+
+    # Start service with timeout
+    echo "   Starting service..."
+    timeout 10 systemctl start "$SERVICE_NAME" 2>/dev/null || {
+        log_message "${RED}❌ Service start timed out${NC}"
+        echo ""
+        read -p "Press Enter to continue..." < /dev/tty
+        return 1
+    }
     sleep 3
 
+    # Check status
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         log_message "${GREEN}✅ Service restarted successfully${NC}"
         echo ""
         echo -e "${YELLOW}📋 Useful commands:${NC}"
         echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
-        echo -e "${GREEN}   Restart:   ${YELLOW}sudo systemctl restart $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   Status:    ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
     else
-        log_message "${RED}❌ Failed to restart service${NC}"
+        log_message "${RED}❌ Service is not running after restart${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Troubleshooting:${NC}"
+        echo -e "${GREEN}   Check status: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   View logs:    ${YELLOW}sudo journalctl -u $SERVICE_NAME -n 20${NC}"
+        echo -e "${GREEN}   Manual start: ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
     fi
     echo ""
     read -p "Press Enter to continue..." < /dev/tty
@@ -584,9 +606,19 @@ restart_service() {
 stop_service() {
     log_message "Stopping bot service..."
 
-    # Stop and disable service
-    systemctl stop "$SERVICE_NAME"
-    systemctl disable "$SERVICE_NAME"
+    # Stop service with timeout
+    echo "   Stopping service..."
+    timeout 10 systemctl stop "$SERVICE_NAME" 2>/dev/null || {
+        echo "   Force killing service..."
+        systemctl kill "$SERVICE_NAME" 2>/dev/null || true
+    }
+
+    # Disable service
+    echo "   Disabling service..."
+    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+
+    # Reload daemon
+    echo "   Reloading systemd..."
     systemctl daemon-reload
 
     sleep 2
@@ -594,11 +626,16 @@ stop_service() {
     if ! systemctl is-active --quiet "$SERVICE_NAME"; then
         log_message "${GREEN}✅ Service stopped and disabled successfully${NC}"
         echo ""
-        echo -e "${YELLOW}📋 Service commands:${NC}"
-        echo -e "${GREEN}   Start:     ${YELLOW}sudo systemctl enable $SERVICE_NAME && sudo systemctl start $SERVICE_NAME${NC}"
+        echo -e "${YELLOW}📋 To start again:${NC}"
+        echo -e "${GREEN}   Enable:    ${YELLOW}sudo systemctl enable $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   Start:     ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
         echo -e "${GREEN}   View logs: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
     else
-        log_message "${RED}❌ Failed to stop service${NC}"
+        log_message "${RED}❌ Service is still running${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Try manual stop:${NC}"
+        echo -e "${GREEN}   Force stop: ${YELLOW}sudo systemctl kill $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   Check:      ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
     fi
     echo ""
     read -p "Press Enter to continue..." < /dev/tty
