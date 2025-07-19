@@ -52,6 +52,7 @@ show_menu() {
     echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     read -p "Please select an option [0-6]: " choice
+    export choice
 }
 prompt_for_input() {
     local prompt=$1 var_name=$2 default_value=$3
@@ -558,6 +559,9 @@ restart_service() {
 # Main script
 main() {
     check_root
+
+    # Initialize choice variable
+    choice=""
 
     # Check for command line arguments first
     if [ "$1" = "install" ] || [ "$1" = "1" ]; then
