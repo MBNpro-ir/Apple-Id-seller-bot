@@ -73,6 +73,36 @@ prompt_for_input() {
     done
 }
 
+# Prompt for BOT_TOKEN with validation
+prompt_for_bot_token() {
+    local value
+
+    while true; do
+        read -p "Enter your BOT_TOKEN: " value < /dev/tty
+
+        if [ -z "$value" ]; then
+            echo -e "   ${RED}[ERROR] BOT_TOKEN cannot be empty. Please try again.${NC}"
+            continue
+        fi
+
+        # Validate BOT_TOKEN format (should be like: 123456789:AAA...)
+        if [[ "$value" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+            # Check if it contains colon and has reasonable length
+            if [[ ${#value} -ge 35 && "$value" == *":"* ]]; then
+                BOT_TOKEN="$value"
+                echo -e "   ${GREEN}✅ Valid BOT_TOKEN format${NC}"
+                break
+            else
+                echo -e "   ${RED}[ERROR] Invalid BOT_TOKEN format. Should be like: 123456789:AAA...${NC}"
+                echo -e "   ${YELLOW}💡 Example: 1234567890:AAGBCoKoGdM80pLx90CSSSeupXc-rg2v2Lw${NC}"
+            fi
+        else
+            echo -e "   ${RED}[ERROR] Invalid BOT_TOKEN format. Should contain numbers:letters${NC}"
+            echo -e "   ${YELLOW}💡 Example: 1234567890:AAGBCoKoGdM80pLx90CSSSeupXc-rg2v2Lw${NC}"
+        fi
+    done
+}
+
 # Generate API key from secret
 generate_api_key() {
     local secret=$1
@@ -158,6 +188,36 @@ prompt_for_numeric() {
     done
 }
 
+# Prompt for ADMIN_ID with validation
+prompt_for_admin_id() {
+    local value
+
+    while true; do
+        read -p "Enter your primary ADMIN_ID (numeric): " value < /dev/tty
+
+        if [ -z "$value" ]; then
+            echo -e "   ${RED}[ERROR] ADMIN_ID cannot be empty. Please try again.${NC}"
+            continue
+        fi
+
+        # Validate ADMIN_ID format (should be numeric and reasonable length)
+        if [[ "$value" =~ ^[0-9]+$ ]]; then
+            # Check if it has reasonable length for Telegram user ID (7-10 digits typically)
+            if [[ ${#value} -ge 7 && ${#value} -le 12 ]]; then
+                ADMIN_ID="$value"
+                echo -e "   ${GREEN}✅ Valid ADMIN_ID format${NC}"
+                break
+            else
+                echo -e "   ${RED}[ERROR] ADMIN_ID should be 7-12 digits long${NC}"
+                echo -e "   ${YELLOW}💡 Example: 123456789 or 1234567890${NC}"
+            fi
+        else
+            echo -e "   ${RED}[ERROR] ADMIN_ID should contain only numbers${NC}"
+            echo -e "   ${YELLOW}💡 Example: 123456789 or 1234567890${NC}"
+        fi
+    done
+}
+
 prompt_for_payment_group() {
     local prompt=$1 var_name=$2 default_value=$3
     local full_prompt="${prompt}"
@@ -175,6 +235,30 @@ prompt_for_payment_group() {
             fi
         else
             echo -e "   ${RED}[ERROR] This field cannot be empty. Please try again.${NC}"
+        fi
+    done
+}
+
+# Prompt for ADMIN_LINK with validation
+prompt_for_admin_link() {
+    local value
+
+    while true; do
+        read -p "Enter the admin contact link (e.g., @your_username): " value < /dev/tty
+
+        if [ -z "$value" ]; then
+            echo -e "   ${RED}[ERROR] Admin link cannot be empty. Please try again.${NC}"
+            continue
+        fi
+
+        # Validate ADMIN_LINK format (should start with @)
+        if [[ "$value" =~ ^@[a-zA-Z0-9_]{5,32}$ ]]; then
+            ADMIN_LINK="$value"
+            echo -e "   ${GREEN}✅ Valid admin link format${NC}"
+            break
+        else
+            echo -e "   ${RED}[ERROR] Admin link should start with @ and be 5-32 characters${NC}"
+            echo -e "   ${YELLOW}💡 Example: @your_username or @admin_support${NC}"
         fi
     done
 }
@@ -300,9 +384,9 @@ while true; do
 
     log_message "Step 4: Please provide the bot configuration..."
     echo "--------------------------------------------------"
-    prompt_for_input "Enter your BOT_TOKEN" BOT_TOKEN
-    prompt_for_numeric "Enter your primary ADMIN_ID (numeric)" ADMIN_ID
-    prompt_for_input "Enter the admin contact link (e.g., @your_username)" ADMIN_LINK
+    prompt_for_bot_token
+    prompt_for_admin_id
+    prompt_for_admin_link
     prompt_for_payment_group "Enter the payment group ID (e.g., -100123456789 or @channel_name)" PAYMENT_GROUP_ID
     prompt_for_input "Log Level (DEBUG, INFO, WARNING, ERROR)" LOG_LEVEL "INFO"
     prompt_for_numeric "Backup Hour (0-23)" BACKUP_TIME_HOUR "0"
