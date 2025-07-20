@@ -341,7 +341,7 @@ EOF
     fi
 done
 log_message "Step 5: Creating .env configuration file..."
-cat > .env << 'EOF'
+cat > .env << EOF
 # Telegram Bot Configuration
 BOT_TOKEN=${BOT_TOKEN}
 ADMIN_ID=${ADMIN_ID}
@@ -377,22 +377,6 @@ API_SECRET=MBN_AppleID_2025_SecureKey_9x7K2mP8qR5vN3wE6tY1uI4oA8sD7fG
 # Other Configuration
 SUPPORT_USERNAME=${SUPPORT_USERNAME}
 EOF
-
-# Replace variables in the .env file
-sed -i "s/\${BOT_TOKEN}/${BOT_TOKEN}/g" .env
-sed -i "s/\${ADMIN_ID}/${ADMIN_ID}/g" .env
-sed -i "s/\${ADMIN_LINK}/${ADMIN_LINK}/g" .env
-sed -i "s/\${PAYMENT_GROUP_ID}/${PAYMENT_GROUP_ID}/g" .env
-sed -i "s/\${LOG_LEVEL}/${LOG_LEVEL}/g" .env
-sed -i "s/\${BACKUP_TIME_HOUR}/${BACKUP_TIME_HOUR}/g" .env
-sed -i "s/\${BACKUP_TIME_MINUTE}/${BACKUP_TIME_MINUTE}/g" .env
-sed -i "s/\${TIMEZONE}/${TIMEZONE}/g" .env
-sed -i "s/\${BANK_NAME}/${BANK_NAME}/g" .env
-sed -i "s/\${BANK_ACCOUNT_NUMBER}/${BANK_ACCOUNT_NUMBER}/g" .env
-sed -i "s/\${BANK_ACCOUNT_HOLDER}/${BANK_ACCOUNT_HOLDER}/g" .env
-sed -i "s/\${BANK_IBAN}/${BANK_IBAN}/g" .env
-sed -i "s/\${LICENSE_KEY}/${LICENSE_KEY}/g" .env
-sed -i "s/\${SUPPORT_USERNAME}/${SUPPORT_USERNAME}/g" .env
 echo "   .env file created."
 log_message "Step 6: Creating user data directories..."
 cd "${INSTALL_DIR}"
