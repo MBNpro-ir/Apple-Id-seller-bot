@@ -1,0 +1,6 @@
+# File Integrity Checksums (SHA256)
+# Generated on: 2025-07-20 23:54:34 UTC
+
+31c8724ab95858f0e9f2faea6922553578e84969f4b7ba89c3aa4042c1189ef3  apple_bot
+d44cc786dfedd6a27d5bd3312117bb8a05496c4c70a688798888a2d8e2e6817e  requirements.txt
+049aa4c51d4097af74e24f978db69fb68f1e4c924698dd8da0c881d56b17d0f7  install.sh

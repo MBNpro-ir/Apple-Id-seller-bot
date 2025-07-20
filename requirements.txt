@@ -6,3 +6,6 @@ aiosqlite>=0.19.0
 pytz>=2023.3
 APScheduler>=3.10.0
 pyinstaller
+requests
+psutil>=5.9.0
+pyarmor
