@@ -304,18 +304,14 @@ while true; do
     prompt_for_numeric "Enter your primary ADMIN_ID (numeric)" ADMIN_ID
     prompt_for_input "Enter the admin contact link (e.g., @your_username)" ADMIN_LINK
     prompt_for_payment_group "Enter the payment group ID (e.g., -100123456789 or @channel_name)" PAYMENT_GROUP_ID
-    prompt_for_input "Excel file path" EXCEL_FILE_PATH "database/data.xlsx"
-    prompt_for_input "SQL database path" SQL_DATABASE_PATH "database/bot_database.db"
-    prompt_for_input "JSON database path" JSON_DATABASE_PATH "database/bot_data.json"
-    prompt_for_input "Backups path" JSON_BACKUP_PATH "backups/"
     prompt_for_input "Log Level (DEBUG, INFO, WARNING, ERROR)" LOG_LEVEL "INFO"
     prompt_for_numeric "Backup Hour (0-23)" BACKUP_TIME_HOUR "0"
     prompt_for_numeric "Backup Minute (0-59)" BACKUP_TIME_MINUTE "0"
     prompt_for_input "Timezone" TIMEZONE "Asia/Tehran"
-    prompt_for_input "Bank Name" BANK_NAME "Bank Melli Iran"
-    prompt_for_input "Bank Account Number" BANK_ACCOUNT_NUMBER "6037990000000000"
-    prompt_for_input "Bank Account Holder's Name" BANK_ACCOUNT_HOLDER "Your Name"
-    prompt_for_input "Bank IBAN" BANK_IBAN "IR000000000000000000000000"
+    prompt_for_input "Bank Name" BANK_NAME "بانک ملی ایران"
+    prompt_for_input "Bank Account Number" BANK_ACCOUNT_NUMBER "1234567890123456"
+    prompt_for_input "Bank Account Holder's Name" BANK_ACCOUNT_HOLDER "نام صاحب حساب"
+    prompt_for_input "Bank IBAN" BANK_IBAN "IR123456789012345678901234"
     prompt_for_input "Support Username (e.g., @your_username)" SUPPORT_USERNAME "@your_support"
     echo "--------------------------------------------------"
     log_message "Configuration Summary - Please review:"
@@ -326,12 +322,7 @@ BOT_TOKEN=${BOT_TOKEN}
 ADMIN_ID=${ADMIN_ID}
 ADMIN_LINK=${ADMIN_LINK}
 PAYMENT_GROUP_ID=${PAYMENT_GROUP_ID}
-EXCEL_FILE_PATH=${EXCEL_FILE_PATH}
-SQL_DATABASE_PATH=${SQL_DATABASE_PATH}
-JSON_DATABASE_PATH=${JSON_DATABASE_PATH}
-JSON_BACKUP_PATH=${JSON_BACKUP_PATH}
 LOG_LEVEL=${LOG_LEVEL}
-LOG_FILE=botlog.txt
 BACKUP_TIME_HOUR=${BACKUP_TIME_HOUR}
 BACKUP_TIME_MINUTE=${BACKUP_TIME_MINUTE}
 TIMEZONE=${TIMEZONE}
@@ -350,30 +341,58 @@ EOF
     fi
 done
 log_message "Step 5: Creating .env configuration file..."
-cat > .env << EOF
-LICENSE_KEY=${LICENSE_KEY}
-LICENSE_API_URL=${LICENSE_API_URL}
-
-API_SECRET=${API_SECRET}
+cat > .env << 'EOF'
+# Telegram Bot Configuration
 BOT_TOKEN=${BOT_TOKEN}
 ADMIN_ID=${ADMIN_ID}
 ADMIN_LINK=${ADMIN_LINK}
 PAYMENT_GROUP_ID=${PAYMENT_GROUP_ID}
-EXCEL_FILE_PATH=${EXCEL_FILE_PATH}
-SQL_DATABASE_PATH=${SQL_DATABASE_PATH}
-JSON_DATABASE_PATH=${JSON_DATABASE_PATH}
-JSON_BACKUP_PATH=${JSON_BACKUP_PATH}
+
+# Database Configuration (Dual Storage System)
+EXCEL_FILE_PATH=database/data.xlsx
+SQL_DATABASE_PATH=database/bot_database.db
+JSON_DATABASE_PATH=database/bot_data.json
+JSON_BACKUP_PATH=backups/
+
+# Logging Configuration
 LOG_LEVEL=${LOG_LEVEL}
 LOG_FILE=botlog.txt
+
+# Backup Configuration
 BACKUP_TIME_HOUR=${BACKUP_TIME_HOUR}
 BACKUP_TIME_MINUTE=${BACKUP_TIME_MINUTE}
 TIMEZONE=${TIMEZONE}
+
+# Bank Information (for wallet deposits)
 BANK_NAME=${BANK_NAME}
 BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER}
 BANK_ACCOUNT_HOLDER=${BANK_ACCOUNT_HOLDER}
 BANK_IBAN=${BANK_IBAN}
+
+# License Configuration
+LICENSE_KEY=${LICENSE_KEY}
+LICENSE_API_URL=http://38.180.138.154:8080
+API_SECRET=MBN_AppleID_2025_SecureKey_9x7K2mP8qR5vN3wE6tY1uI4oA8sD7fG
+
+# Other Configuration
 SUPPORT_USERNAME=${SUPPORT_USERNAME}
 EOF
+
+# Replace variables in the .env file
+sed -i "s/\${BOT_TOKEN}/${BOT_TOKEN}/g" .env
+sed -i "s/\${ADMIN_ID}/${ADMIN_ID}/g" .env
+sed -i "s/\${ADMIN_LINK}/${ADMIN_LINK}/g" .env
+sed -i "s/\${PAYMENT_GROUP_ID}/${PAYMENT_GROUP_ID}/g" .env
+sed -i "s/\${LOG_LEVEL}/${LOG_LEVEL}/g" .env
+sed -i "s/\${BACKUP_TIME_HOUR}/${BACKUP_TIME_HOUR}/g" .env
+sed -i "s/\${BACKUP_TIME_MINUTE}/${BACKUP_TIME_MINUTE}/g" .env
+sed -i "s/\${TIMEZONE}/${TIMEZONE}/g" .env
+sed -i "s/\${BANK_NAME}/${BANK_NAME}/g" .env
+sed -i "s/\${BANK_ACCOUNT_NUMBER}/${BANK_ACCOUNT_NUMBER}/g" .env
+sed -i "s/\${BANK_ACCOUNT_HOLDER}/${BANK_ACCOUNT_HOLDER}/g" .env
+sed -i "s/\${BANK_IBAN}/${BANK_IBAN}/g" .env
+sed -i "s/\${LICENSE_KEY}/${LICENSE_KEY}/g" .env
+sed -i "s/\${SUPPORT_USERNAME}/${SUPPORT_USERNAME}/g" .env
 echo "   .env file created."
 log_message "Step 6: Creating user data directories..."
 cd "${INSTALL_DIR}"
@@ -386,6 +405,7 @@ cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
 Description=Apple ID Bot Service
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -394,6 +414,10 @@ WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/${EXECUTABLE_NAME}
 Restart=always
 RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
 StandardOutput=journal
 StandardError=journal
 
@@ -576,17 +600,18 @@ start_service() {
 
     # Start service with timeout
     echo "   Starting service..."
-    timeout 15 systemctl start "$SERVICE_NAME" 2>/dev/null || {
+    timeout 60 systemctl start "$SERVICE_NAME" 2>/dev/null || {
         log_message "${RED}❌ Service start timed out${NC}"
         echo ""
         echo -e "${YELLOW}📋 Troubleshooting:${NC}"
         echo -e "${GREEN}   Check status: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
         echo -e "${GREEN}   View logs:    ${YELLOW}sudo journalctl -u $SERVICE_NAME -n 20${NC}"
+        echo -e "${GREEN}   Manual start: ${YELLOW}sudo systemctl start $SERVICE_NAME${NC}"
         read -p "Press Enter to continue..." < /dev/tty
         return 1
     }
 
-    sleep 3
+    sleep 5
 
     # Check status
     if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -622,21 +647,30 @@ restart_service() {
 
     # Stop service first with timeout
     echo "   Stopping service..."
-    timeout 10 systemctl stop "$SERVICE_NAME" 2>/dev/null || {
-        echo "   Force killing service..."
-        systemctl kill "$SERVICE_NAME" 2>/dev/null || true
+    timeout 30 systemctl stop "$SERVICE_NAME" 2>/dev/null || {
+        echo "   Service stop timed out, force killing..."
+        timeout 10 systemctl kill --signal=SIGTERM "$SERVICE_NAME" 2>/dev/null || true
+        sleep 2
+        timeout 5 systemctl kill --signal=SIGKILL "$SERVICE_NAME" 2>/dev/null || true
     }
-    sleep 2
+    sleep 3
+
+    # Reload daemon to ensure clean state
+    echo "   Reloading systemd daemon..."
+    systemctl daemon-reload
 
     # Start service with timeout
     echo "   Starting service..."
-    timeout 10 systemctl start "$SERVICE_NAME" 2>/dev/null || {
+    timeout 60 systemctl start "$SERVICE_NAME" 2>/dev/null || {
         log_message "${RED}❌ Service start timed out${NC}"
         echo ""
+        echo -e "${YELLOW}📋 Troubleshooting:${NC}"
+        echo -e "${GREEN}   Check status: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+        echo -e "${GREEN}   View logs:    ${YELLOW}sudo journalctl -u $SERVICE_NAME -n 20${NC}"
         read -p "Press Enter to continue..." < /dev/tty
         return 1
     }
-    sleep 3
+    sleep 5
 
     # Check status
     if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -663,20 +697,22 @@ stop_service() {
 
     # Stop service with timeout
     echo "   Stopping service..."
-    timeout 10 systemctl stop "$SERVICE_NAME" &>/dev/null || {
-        echo "   Force killing service..."
-        timeout 5 systemctl kill "$SERVICE_NAME" &>/dev/null || true
+    timeout 30 systemctl stop "$SERVICE_NAME" &>/dev/null || {
+        echo "   Service stop timed out, force killing..."
+        timeout 10 systemctl kill --signal=SIGTERM "$SERVICE_NAME" &>/dev/null || true
+        sleep 2
+        timeout 5 systemctl kill --signal=SIGKILL "$SERVICE_NAME" &>/dev/null || true
     }
 
     # Disable service
     echo "   Disabling service..."
-    timeout 5 systemctl disable "$SERVICE_NAME" &>/dev/null || true
+    timeout 10 systemctl disable "$SERVICE_NAME" &>/dev/null || true
 
     # Reload daemon
     echo "   Reloading systemd..."
-    timeout 5 systemctl daemon-reload &>/dev/null || true
+    timeout 10 systemctl daemon-reload &>/dev/null || true
 
-    sleep 2
+    sleep 3
 
     if ! systemctl is-active --quiet "$SERVICE_NAME"; then
         log_message "${GREEN}✅ Service stopped and disabled successfully${NC}"
